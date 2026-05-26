@@ -17,8 +17,10 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 
-import { Mini, Panel } from "@/components/primitives/panel";
+import { Panel } from "@/components/primitives/panel";
+import type { BusinessImpact } from "@/lib/concierge-client";
 
+import { AiConcierge } from "./ai-concierge";
 import { OperationsCockpit } from "./operations-cockpit";
 
 type WindowKey = "daily" | "weekly" | "monthly" | "yearly";
@@ -152,8 +154,6 @@ export function CommandCenter() {
     costDelta: 0,
     occupancyDelta: 0,
   });
-  const [chat, setChat] = useState("Add 10 ICU beds");
-
   useEffect(() => {
     const timer = window.setInterval(() => setTick((value) => value + 1), 2500);
     const alertTimer = window.setInterval(() => {
@@ -181,43 +181,23 @@ export function CommandCenter() {
     [revenueMultiplier],
   );
 
-  function runSimulation(prompt: string) {
-    const lower = prompt.toLowerCase();
-    if (lower.includes("icu") || lower.includes("bed")) {
-      setSimulation({
-        active: true,
-        action: "Added 10 ICU beds at Hyderabad Banjara Hills",
-        revenueDelta: 8.1,
-        waitDelta: -18,
-        costDelta: 5.4,
-        occupancyDelta: 3.2,
-      });
-      toast.success("Simulation applied: 10 ICU beds added");
-      return;
-    }
-
-    if (lower.includes("nurse") || lower.includes("hire")) {
-      setSimulation({
-        active: true,
-        action: "Hired 18 ICU nurses and reduced agency dependency",
-        revenueDelta: 2.3,
-        waitDelta: -7,
-        costDelta: 3.1,
-        occupancyDelta: 1.4,
-      });
-      toast.success("Simulation applied: nurse hiring plan");
-      return;
-    }
+  function applyImpact(impact: BusinessImpact) {
+    const findDelta = (needles: string[]): number => {
+      const c = impact.contributions.find((row) =>
+        needles.some((needle) => row.metric.toLowerCase().includes(needle)),
+      );
+      return c ? c.delta : 0;
+    };
 
     setSimulation({
       active: true,
-      action: "Opened one extra evening OR block",
-      revenueDelta: 5.6,
-      waitDelta: -11,
-      costDelta: 2.9,
-      occupancyDelta: 2.0,
+      action: impact.action,
+      revenueDelta: findDelta(["revenue"]),
+      waitDelta: findDelta(["er wait", "wait"]),
+      costDelta: findDelta(["operating cost", "cost", "capex"]),
+      occupancyDelta: findDelta(["occupancy"]),
     });
-    toast.success("Simulation applied: OR capacity plan");
+    toast.success(`Impact projected: ${impact.action}`);
   }
 
   return (
@@ -428,34 +408,7 @@ export function CommandCenter() {
           </div>
         </Panel>
 
-        <Panel title="AI Concierge What-If Simulator" kicker="decision support not generic chatbot">
-          <div className="space-y-4">
-            <div className="border border-hairline bg-background p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">CEO asks</p>
-              <textarea
-                className="mt-3 min-h-24 w-full resize-none border border-hairline bg-surface p-3 text-sm outline-none focus:border-accent"
-                value={chat}
-                onChange={(event) => setChat(event.target.value)}
-              />
-              <button
-                className="mt-3 w-full bg-accent px-4 py-3 font-mono text-[11px] uppercase tracking-[0.24em] text-background"
-                onClick={() => runSimulation(chat)}
-              >
-                Run Decision Simulation
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Mini label="Revenue impact" value={`${simulation.revenueDelta >= 0 ? "+" : ""}${simulation.revenueDelta}%`} />
-              <Mini label="ER wait impact" value={`${simulation.waitDelta}%`} />
-              <Mini label="Cost impact" value={`+${simulation.costDelta}%`} />
-              <Mini label="Occupancy impact" value={`+${simulation.occupancyDelta}%`} />
-            </div>
-            <p className="text-sm leading-6 text-muted">
-              Prototype behavior: the concierge parses the CEO instruction, applies a reversible simulation overlay,
-              and updates financial, throughput, staffing and cost tiles instantly.
-            </p>
-          </div>
-        </Panel>
+        <AiConcierge onImpact={applyImpact} />
       </section>
     </main>
   );

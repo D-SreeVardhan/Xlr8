@@ -6,22 +6,22 @@ Every dependency. Updated whenever a new package is added.
 
 | Package | Version | Purpose |
 |---|---|---|
-| `next` | 15.x | App Router, React 19, server actions, Turbopack |
-| `react` / `react-dom` | 19.x | UI runtime |
-| `typescript` | 5.x | Type safety |
-| `tailwindcss` | 4.x | Utility-first styling |
-| `@apollo/client` | 3.x | GraphQL client with subscription support |
-| `graphql` | 16.x | Reference implementation |
-| `graphql-ws` | 5.x | WebSocket subscription transport |
-| `@graphql-codegen/cli` + `client-preset` | 5.x | Auto-generated typed React hooks from `.graphql` files |
-| `recharts` | 2.x | Most KPI charts |
-| `@visx/*` | 3.x | Custom visualizations (bed Tetris, dependency graph) |
-| `react-leaflet` + `leaflet` | 4.x / 1.9.x | Ambulance live map |
-| `framer-motion` | 11.x | Minimal motion (number flip, overlay transitions) |
-| `sonner` | 1.x | Toast notifications |
-| `vega` + `vega-lite` + `react-vega` | 5.x / 5.x / 7.x | Concierge inline chart rendering |
-| `cmdk` | 1.x | Cmd+K palette for Concierge |
-| `clsx` + `tailwind-merge` | latest | Class utilities |
+| `next` | `^15.5.18` | App Router, React 19, server actions, Turbopack |
+| `react` / `react-dom` | `19.2.4` | UI runtime |
+| `typescript` | `^5` | Type safety |
+| `tailwindcss` | `^4` | Utility-first styling |
+| `@apollo/client` | `^4.2.0` | GraphQL client with subscription support |
+| `graphql` | `^16.14.0` | Reference implementation |
+| `graphql-ws` | `^6.0.8` | WebSocket subscription transport |
+| `@graphql-codegen/cli` + `client-preset` | `^7.0.0` / `^6.0.0` | Auto-generated typed React hooks from `.graphql` files |
+| `recharts` | `^3.8.1` | Most KPI charts |
+| Custom SVG/React components | local | Bed Tetris and license dependency graph; avoids `@visx/*` React 19 peer conflict |
+| `react-leaflet` + `leaflet` | `^5.0.0` / `^1.9.4` | Ambulance live map |
+| `framer-motion` | `^12.40.0` | Minimal motion (number flip, overlay transitions) |
+| `sonner` | `^2.0.7` | Toast notifications |
+| `vega` + `vega-lite` + `react-vega` | `^6.2.0` / `^6.4.3` / `^8.0.0` | Concierge inline chart rendering |
+| `cmdk` | `^1.1.1` | Cmd+K palette for Concierge |
+| `clsx` + `tailwind-merge` | `^2.1.1` / `^3.6.0` | Class utilities |
 
 ### Fonts (self-hosted via `next/font/google`)
 

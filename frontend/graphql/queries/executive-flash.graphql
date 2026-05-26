@@ -1,0 +1,13 @@
+query ExecutiveFlash($facilityId: String!) {
+  executiveFlash(facilityId: $facilityId) {
+    facilityId
+    capturedAt
+    revenueCr
+    arpob
+    occupancyPct
+    alosDays
+    operatingEbitdaMarginPct
+    ebitdaPerBedLakh
+    isSimulated
+  }
+}

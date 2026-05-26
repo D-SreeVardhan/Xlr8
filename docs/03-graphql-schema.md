@@ -2,36 +2,53 @@
 
 This file is updated whenever Strawberry schema fields change.
 
-## Initial Schema Plan
+## Current Scaffold Schema
 
 ```graphql
+scalar DateTime
+
+type FacilityType {
+  id: String!
+  name: String!
+  city: String!
+  operationalBeds: Int!
+}
+
+type ExecutiveFlashType {
+  facilityId: String!
+  capturedAt: DateTime!
+  revenueCr: Float!
+  arpob: Float!
+  occupancyPct: Float!
+  alosDays: Float!
+  operatingEbitdaMarginPct: Float!
+  ebitdaPerBedLakh: Float!
+  isSimulated: Boolean!
+}
+
 type Query {
-  executiveFlash: ExecutiveFlash!
-  revenue(window: TimeWindow!, departmentId: ID): RevenueLens!
-  beds(facilityId: ID!): [Bed!]!
-  doctorScorecard(filter: DoctorFilter): [DoctorScore!]!
-  nabhIndicators: [NabhIndicator!]!
-  tpaDenialRisk: [DenialClaim!]!
-  licenses: [License!]!
-  patientFeedback(window: TimeWindow!): FeedbackSummary!
-  diagnosticsRoi: [MachineRoi!]!
+  health: String!
+  facilities: [FacilityType!]!
+  executiveFlash(facilityId: String! = "hyd-banjara"): ExecutiveFlashType!
 }
 
 type Mutation {
-  acknowledgeAlert(id: ID!): Alert!
-  runSimulation(input: SimulationInput!): SimulationResult!
-  revertSimulation(snapshotId: ID!): Boolean!
+  acknowledgeAlert(id: ID!): Boolean!
 }
 
 type Subscription {
-  bedEvents(facilityId: ID!): BedEvent!
-  vitalsStream(unit: String!): VitalsTick!
-  tpaEvents: TpaEvent!
-  alerts(minSeverity: Severity = LOW): Alert!
-  stressScore: StressTick!
-  ambulancePositions: [AmbulanceTick!]!
+  executiveFlashTicks(facilityId: String! = "hyd-banjara"): ExecutiveFlashType!
 }
 ```
+
+## Planned Expansion Fields
+
+- Revenue lens: `revenue(window, departmentId)`
+- Operations: `beds`, `orRooms`, `ambulances`, `erQueue`
+- Workforce: `doctorScorecard`, `nurseAttritionRisk`
+- Quality: `nabhIndicators`, `sentinelEvents`
+- TPA: `tpaDenialRisk`, `tpaEvents`
+- Simulation: `runSimulation`, `revertSimulation`, `dashboardOverlay`
 
 ## Rules
 

@@ -20,11 +20,17 @@ export type BusinessImpact = {
   source: "openai" | "heuristic";
 };
 
+export type Refusal = {
+  reason: string;
+  suggestions: string[];
+};
+
 export type ConciergeEvent =
   | { type: "meta"; snapshot: Record<string, number>; question: string }
   | { type: "action"; action: string; horizon: string; source: string }
   | { type: "token"; text: string }
   | { type: "impact"; impact: BusinessImpact }
+  | { type: "refusal"; refusal: Refusal }
   | { type: "done"; status: string; source: string };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -66,6 +72,17 @@ function parseSseChunk(buffer: string): { events: ConciergeEvent[]; rest: string
           break;
         case "impact":
           events.push({ type: "impact", impact: data as unknown as BusinessImpact });
+          break;
+        case "refusal":
+          events.push({
+            type: "refusal",
+            refusal: {
+              reason: String(data.reason ?? ""),
+              suggestions: Array.isArray(data.suggestions)
+                ? (data.suggestions as string[])
+                : [],
+            },
+          });
           break;
         case "done":
           events.push({

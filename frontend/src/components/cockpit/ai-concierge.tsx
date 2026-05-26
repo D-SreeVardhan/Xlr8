@@ -7,6 +7,7 @@ import { Panel } from "@/components/primitives/panel";
 import {
   type BusinessImpact,
   type Contribution,
+  type Refusal,
   streamConcierge,
 } from "@/lib/concierge-client";
 
@@ -29,6 +30,7 @@ export function AiConcierge({ onImpact }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [streamedText, setStreamedText] = useState<string>("");
   const [impact, setImpact] = useState<BusinessImpact | null>(null);
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [actionTag, setActionTag] = useState<{ action: string; source: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -47,6 +49,7 @@ export function AiConcierge({ onImpact }: Props) {
       setStatus("streaming");
       setStreamedText("");
       setImpact(null);
+      setRefusal(null);
       setActionTag(null);
       setError(null);
 
@@ -65,8 +68,15 @@ export function AiConcierge({ onImpact }: Props) {
                 setImpact(event.impact);
                 onImpact?.(event.impact);
                 break;
+              case "refusal":
+                setRefusal(event.refusal);
+                toast.message("Concierge: out of scope — operations unchanged");
+                break;
               case "done":
-                toast.success(`Concierge: ${event.source === "openai" ? "AI analysis" : "Heuristic projection"} ready`);
+                if (event.status === "refused") return;
+                toast.success(
+                  `Concierge: ${event.source === "openai" ? "AI analysis" : "Heuristic projection"} ready`,
+                );
                 break;
             }
           },
@@ -125,31 +135,65 @@ export function AiConcierge({ onImpact }: Props) {
           )}
         </div>
 
-        {(actionTag || streamedText || status === "streaming") && (
-          <div className="border border-hairline bg-background p-4">
+        {refusal ? (
+          <div className="border border-warn/60 bg-warn/5 p-4">
             <div className="flex items-center justify-between">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-                Concierge response
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-warn">
+                Out of scope · operations unchanged
               </p>
-              {actionTag && (
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                  source · {actionTag.source}
-                </span>
-              )}
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+                source · scope_gate
+              </span>
             </div>
-            {actionTag && (
-              <p className="mt-3 font-serif text-xl leading-tight">{actionTag.action}</p>
-            )}
             <p className="mt-3 text-sm leading-6 text-foreground/90">
-              {streamedText}
-              {status === "streaming" && (
-                <span className="ml-1 inline-block h-3 w-2 animate-pulse bg-accent align-middle" />
-              )}
+              {streamedText || refusal.reason}
             </p>
+            {refusal.suggestions.length > 0 && (
+              <div className="mt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+                  Try one of these instead
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {refusal.suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setMessage(suggestion)}
+                      className="border border-hairline px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted hover:border-accent hover:text-accent"
+                    >
+                      {suggestion.length > 48 ? `${suggestion.slice(0, 46)}…` : suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+        ) : (
+          (actionTag || streamedText || status === "streaming") && (
+            <div className="border border-hairline bg-background p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
+                  Concierge response
+                </p>
+                {actionTag && (
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+                    source · {actionTag.source}
+                  </span>
+                )}
+              </div>
+              {actionTag && (
+                <p className="mt-3 font-serif text-xl leading-tight">{actionTag.action}</p>
+              )}
+              <p className="mt-3 text-sm leading-6 text-foreground/90">
+                {streamedText}
+                {status === "streaming" && (
+                  <span className="ml-1 inline-block h-3 w-2 animate-pulse bg-accent align-middle" />
+                )}
+              </p>
+            </div>
+          )
         )}
 
-        {impact && (
+        {impact && !refusal && (
           <>
             <ContributionGrid contributions={impact.contributions} />
             <div className="grid gap-3 md:grid-cols-3">

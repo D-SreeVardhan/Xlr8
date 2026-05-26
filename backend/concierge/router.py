@@ -7,7 +7,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ml.registry import model_snapshot
-from services.business_impact import BusinessImpact, project_business_impact
+from services.business_impact import (
+    BusinessImpact,
+    Refusal,
+    project_business_impact,
+)
 
 router = APIRouter(prefix="/api/concierge", tags=["concierge"])
 
@@ -38,7 +42,16 @@ async def stream_response(message: str) -> AsyncGenerator[str, None]:
     )
     await asyncio.sleep(0)
 
-    impact: BusinessImpact = await project_business_impact(message, snapshot)
+    result = await project_business_impact(message, snapshot)
+
+    if isinstance(result, Refusal):
+        yield sse("refusal", result.model_dump())
+        async for chunk in _stream_tokens(result.reason):
+            yield chunk
+        yield sse("done", {"status": "refused", "source": "scope_gate"})
+        return
+
+    impact: BusinessImpact = result
 
     yield sse(
         "action",

@@ -42,6 +42,62 @@ class BusinessImpact(BaseModel):
     source: Literal["openai", "heuristic"] = "heuristic"
 
 
+class Refusal(BaseModel):
+    reason: str
+    suggestions: list[str]
+
+
+HOSPITAL_LEXICON: set[str] = {
+    # Clinical entities
+    "patient", "patients", "doctor", "doctors", "nurse", "nurses", "consultant",
+    "physician", "physicians", "intensivist", "anesthetist", "anaesthetist",
+    "surgeon", "radiologist", "pathologist", "technician", "technologist",
+    "matron", "paramedic",
+    # Hospital infrastructure
+    "icu", "hdu", "ot", "ward", "bed", "beds", "opd", "ipd",
+    "er", "emergency", "ambulance", "ambulances", "pharmacy", "lab", "labs",
+    "blood", "blood bank", "isolation",
+    # Specialties / clinical
+    "oncology", "cardiac", "cardiology", "neuro", "neurology", "ortho",
+    "orthopaedic", "orthopedic", "orthopaedics", "orthopedics", "maternity",
+    "paediatric", "pediatric", "paediatrics", "pediatrics", "radiology",
+    "pathology", "diagnostic", "diagnostics", "imaging", "mri", "ct",
+    "x-ray", "xray", "linac", "cath lab", "scanner", "ventilator",
+    "endoscopy", "dialysis", "transplant", "ivf", "trauma",
+    # Procedures and care
+    "admission", "admit", "discharge", "triage", "surgery", "surgical",
+    "elective", "procedure", "consultation", "follow-up",
+    # Business / operations
+    "hospital", "hospitals", "clinic", "clinics", "facility", "facilities",
+    "branch", "greenfield", "arpob", "alos", "occupancy", "ebitda", "tpa",
+    "claim", "claims", "cashless", "insurance", "insurer", "payer",
+    "payers", "denial", "denials", "nabh", "jci", "license", "licences",
+    "licenses", "accreditation", "shift", "shifts", "roster", "attrition",
+    "burnout", "compliance", "audit", "infection", "sepsis", "mortality",
+    "readmission", "readmissions", "los", "throughput", "medication",
+    "medicine", "medicines", "vaccine", "vaccines", "formulary",
+    "medical", "healthcare", "health", "clinical",
+    # Possessive / contextual cues
+    "ceo", "cmo", "cfo", "coo", "cno",
+}
+
+
+CONTEXTUAL_PHRASES: tuple[str, ...] = (
+    "our hospital",
+    "the hospital",
+    "this hospital",
+    "our facility",
+    "this facility",
+    "our network",
+    "our group",
+    "our ward",
+    "our patients",
+    "our staff",
+    "our doctors",
+    "our nurses",
+)
+
+
 SYSTEM_PROMPT = """You are the AI Concierge for the CEO of a multi-facility \
 private hospital group in India (Hyderabad-headquartered, Apollo / Fortis \
 benchmark). The CEO will ask any business question: expansions, hiring, \
@@ -636,7 +692,51 @@ async def openai_impact(message: str, snapshot: dict[str, Any]) -> BusinessImpac
         return None
 
 
-async def project_business_impact(message: str, snapshot: dict[str, Any]) -> BusinessImpact:
+def is_in_scope(message: str) -> bool:
+    text = message.lower().strip()
+    if not text:
+        return False
+    for kw in HOSPITAL_LEXICON:
+        if re.search(rf"\b{re.escape(kw)}\b", text):
+            return True
+    if any(phrase in text for phrase in CONTEXTUAL_PHRASES):
+        return True
+    if _detect_topics(message):
+        return True
+    return False
+
+
+SUGGESTION_PROMPTS: list[str] = [
+    "What if we add 12 ICU beds at Banjara Hills?",
+    "Should we raise cardiac surgery package by 6%?",
+    "How would NABH re-accreditation push contribute to revenue and risk?",
+    "Hire 24 ICU nurses to cut agency dependency — what changes?",
+    "Open an evening OR block for ortho — project the impact.",
+    "Tighten TPA pre-auth and denial cycle — what contributions?",
+]
+
+
+def refusal_for(message: str) -> Refusal:
+    snippet = message.strip()
+    if len(snippet) > 80:
+        snippet = snippet[:77] + "…"
+    return Refusal(
+        reason=(
+            "That question is outside the hospital business domain, so the operations "
+            "cockpit will not change. Ask about beds, OR / OT, staffing, payer mix, "
+            "pricing, capex, compliance, patient experience, expansion or any other "
+            "hospital decision and I will project the contributions."
+        ),
+        suggestions=SUGGESTION_PROMPTS,
+    )
+
+
+async def project_business_impact(
+    message: str,
+    snapshot: dict[str, Any],
+) -> BusinessImpact | Refusal:
+    if not is_in_scope(message):
+        return refusal_for(message)
     impact = await openai_impact(message, snapshot)
     if impact is not None:
         return impact
